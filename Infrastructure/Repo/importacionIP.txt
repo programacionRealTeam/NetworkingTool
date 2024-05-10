@@ -1,0 +1,54 @@
+Modem;192.168.0.1;Modem;Alta
+Servidor DNS;8.8.8.8;Servidor;Alta
+Celular 1;192.168.0.6;Celular;Alta
+Computadora 01;192.168.0.50;PC;Baja
+Camara 01;72.14.194.1;Camara Ip;Media
+Camara 02;72.14.194.2;Camara Ip;Media
+Camara 03;72.14.194.3;Camara Ip;Media
+Camara 04;72.14.194.4;Camara Ip;Media
+Camara 05;72.14.194.5;Camara Ip;Media
+Camara 06;72.14.194.6;Camara Ip;Media
+Camara 07;72.14.194.7;Camara Ip;Media
+Camara 08;72.14.194.8;Camara Ip;Media
+Camara 09;72.14.194.9;Camara Ip;Media
+Camara 10;72.14.194.10;Camara Ip;Media
+Camara 11;72.14.194.11;Camara Ip;Media
+Camara 12;72.14.194.12;Camara Ip;Media
+Camara 13;72.14.194.13;Camara Ip;Media
+Camara 14;72.14.194.14;Camara Ip;Media
+Camara 15;72.14.194.15;Camara Ip;Media
+Camara 16;72.14.194.16;Camara Ip;Media
+Computadora 02;192.168.0.51;PC;Medio
+Camara 18;72.14.194.18;Camara Ip;Media
+Camara 19;72.14.194.19;Camara Ip;Media
+Camara 20;72.14.194.20;Camara Ip;Media
+Camara 21;72.14.194.21;Camara Ip;Media
+Camara 22;72.14.194.22;Camara Ip;Media
+Camara 23;72.14.194.23;Camara Ip;Media
+Camara 24;72.14.194.24;Camara Ip;Media
+Camara 25;72.14.194.25;Camara Ip;Media
+Camara 26;72.14.194.26;Camara Ip;Media
+Camara 27;72.14.194.27;Camara Ip;Media
+Camara 28;72.14.194.28;Camara Ip;Media
+Camara 29;72.14.194.29;Camara Ip;Media
+Camara 30;72.14.194.30;Camara Ip;Media
+Camara 31;72.14.194.31;Camara Ip;Media
+Camara 32;72.14.194.32;Camara Ip;Media
+Camara 33;72.14.194.33;Camara Ip;Media
+Camara 34;72.14.194.34;Camara Ip;Media
+Camara 35;72.14.194.35;Camara Ip;Media
+Camara 36;72.14.194.36;Camara Ip;Media
+Camara 37;72.14.194.37;Camara Ip;Media
+Camara 38;72.14.194.38;Camara Ip;Media
+Camara 39;72.14.194.39;Camara Ip;Media
+Camara 40;72.14.194.40;Camara Ip;Media
+Camara 41;72.14.194.41;Camara Ip;Media
+Camara 42;72.14.194.42;Camara Ip;Media
+Camara 43;72.14.194.43;Camara Ip;Media
+Camara 44;72.14.194.44;Camara Ip;Media
+Camara 45;72.14.194.45;Camara Ip;Media
+Camara 46;72.14.194.46;Camara Ip;Media
+Camara 47;72.14.194.47;Camara Ip;Media
+Servidor 01;192.168.0.52;Servidor;Alta
+Camara 49;72.14.194.49;Camara Ip;Media
+Camara 50;72.14.194.50;Camara Ip;Media
