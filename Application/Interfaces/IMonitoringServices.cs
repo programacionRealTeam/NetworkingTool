@@ -14,8 +14,9 @@ namespace Application.Interfaces
 {
     public interface IMonitoringServices
     {
-        void initRealTime(List<DeviceRequest> listRequest);
-        List<DeviceResponse> sweep(List<DeviceRequest> listRequest);
-
+        void InitRealTime(List<DeviceRequest> listRequest);
+        List<DeviceResponse> Sweep(List<DeviceRequest> listRequest);
+        string InitLogs();
+        void CreateDevice(DeviceRequest device);
     }
 }

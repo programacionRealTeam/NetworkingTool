@@ -1,7 +1,6 @@
-Celular 1;192.168.0.6;Celular;Alta;DestinationHostUnreachable;0;10/5/2024 09:38:30
-Computadora 01;192.168.0.50;PC;Baja;DestinationHostUnreachable;0;10/5/2024 09:38:33
-Camara 09;72.14.194.9;Camara Ip;Media;TimedOut;0;10/5/2024 09:38:40
-Camara 10;72.14.194.10;Camara Ip;Media;TimedOut;0;10/5/2024 09:38:45
-Computadora 02;192.168.0.51;PC;Medio;DestinationHostUnreachable;0;10/5/2024 09:38:49
-Camara 47;72.14.194.47;Camara Ip;Media;TimedOut;0;10/5/2024 09:39:01
-Servidor 01;192.168.0.52;Servidor;Alta;DestinationHostUnreachable;0;10/5/2024 09:39:04
+Computadora 01;192.168.0.50;PC;Baja;DestinationHostUnreachable;0;10/05/2024 9:29:40
+Camara 09;72.14.194.9;Camara Ip;Media;TimedOut;0;10/05/2024 9:29:47
+Camara 10;72.14.194.10;Camara Ip;Media;TimedOut;0;10/05/2024 9:29:52
+Computadora 02;192.168.0.51;PC;Medio;DestinationHostUnreachable;0;10/05/2024 9:29:57
+Camara 47;72.14.194.47;Camara Ip;Media;TimedOut;0;10/05/2024 9:30:08
+Servidor 01;192.168.0.52;Servidor;Alta;DestinationHostUnreachable;0;10/05/2024 9:30:11

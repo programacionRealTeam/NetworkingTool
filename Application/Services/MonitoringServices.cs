@@ -9,110 +9,82 @@ using System.Net.NetworkInformation;
 using System.IO;
 using Domain.Interfaces;
 using System.Threading;
+using Application.Services;
+using Cassandra;
+
 
 namespace Application.Services
 {
     public class MonitoringServices : IMonitoringServices
     {
+        private readonly DeviceServices _deviceServices;
 
-        public void init(List<DeviceRequest> listRequest)
+        public MonitoringServices()
         {
-            initRealTime(listRequest);
+            _deviceServices = new DeviceServices();
         }
 
-
-        //inicializacion de monitoreo de tiempo real
-        public void initRealTime(List<DeviceRequest> listRequest)
+        public void InitRealTime(List<DeviceRequest> listRequest)
         {
-            List<DeviceResponse> devicesOffline = new List<DeviceResponse>();
-
-            // Ruta del archivo de texto dentro del proyecto
-            string filePath = @"..\..\..\Infrastructure\Repo\responsesDevices.txt";
             bool isRunning = true;
 
-
-            //inicializo hilo de barrido de dispositivos offline
             Thread sweepThread = new Thread(() =>
             {
                 while (isRunning)
                 {
-                  devicesOffline = sweep(listRequest); //metodo de barrido
+                    Sweep(listRequest);
                 }
-             
             });
 
             sweepThread.Start();
-            
-
-            //inicializo hilo de escritura de la lista de devicesOffline
-            Thread writerThread = new Thread(() =>
-            {
-            
-                while (isRunning)
-                {
-                        // Escribir la lista de DeviceResponse en el archivo txt
-                        lock (filePath)
-                        {
-                            // Escribir la lista de DeviceResponse en un nuevo archivo txt
-                            using (StreamWriter writer = new StreamWriter(filePath))
-                            {
-                            
-                                foreach (var response in devicesOffline)
-                                {
-                                   writer.WriteLine($"{response.name};{response.ip};{response.category};{response.prioridad};{response.Status};{response.RoundtripTime};{response.Timestamp}");
-                                }
-                            }
-                        }
-                        Thread.Sleep(2000);//tiempo de espera para que no se quiera acceder rapido al txt
-                }
-            });
-
-            writerThread.Start();
-            
             sweepThread.Join();
-            writerThread.Join();
         }
 
-
-        public string initLogs()
+        public List<DeviceResponse> Sweep(List<DeviceRequest> listRequest)
         {
-           //A DESARROLLAR ETAPA DE ALMACENAMIENTO Y CONTEO DE TIEMPO MUERTO DE DISPOSITIVO
+            List<DeviceResponse> devicesOffline = new List<DeviceResponse>();
+
+            foreach (DeviceRequest request in listRequest)
+            {
+                var device = Mappers.mapperToDevice(request);
+                var response = _deviceServices.Ping(device);
+
+                if (response.Status != IPStatus.Success)
+                {
+                    devicesOffline.Add(response);
+                    _deviceServices.CreateDevice(request); // Guardar en Cassandra
+                }
+            }
+
+            return devicesOffline;
+        }
+
+        
+
+        public string InitLogs()
+        {
+            // Implementación de logs aquí, por ahora solo devolvemos un mensaje.
             string mensaje = "Listado de dispositivos que tuvieron perdidas de conexion:";
             return mensaje;
         }
 
-
-        //ALGORITMO DE BARRIDO DE DISPOSITIVOS
-        public List<DeviceResponse> sweep(List<DeviceRequest> listRequest)
+        public void CreateDevice(DeviceRequest device)
         {
-
-            //inicializo el servicio de dispositivos
-            DeviceServices deviceServices = new DeviceServices();
-
-            //creo lista de dispositivos offline que voy a ir actualizando
-            List<DeviceResponse> devices= new List<DeviceResponse>();
-
-
-            //recorro los dispositivos de la listRequest
-            foreach (DeviceRequest device in listRequest)
+            // Por ejemplo, utilizando la clase CassandraContext para interactuar con la base de datos
+            using (ISession session = CassandraContext.GetSession())
             {
-                // mapeo a device y lo dejo en memoria
-                Device devInMemory = Mappers.mapperToDevice(device);
+                // Ejemplo de código para insertar el dispositivo en una tabla de Cassandra [direcciones -> nombre de la tabla ]
+                string query = $"INSERT INTO direcciones (name, ip, category, prioridad) VALUES (?, ?, ?, ?)";
 
-                //hago ping y devuelvo un device response con datos del ping 
-                DeviceResponse response = deviceServices.ping(devInMemory);
+                var preparedStatement = session.Prepare(query);
+                var boundStatement = preparedStatement.Bind(device.name, device.ip, device.category, device.prioridad);
 
-                //si el estado no es sucess entonces lo agrego a la lsita de dispositivos con problemas
-                if (response.Status != IPStatus.Success)
-                {
-                    devices.Add(response);
-                }
+                session.Execute(boundStatement);
             }
 
-            //retorna los dispositivos con problemas
-            return devices;
-
+            Console.WriteLine("Dispositivo guardado correctamente.");
         }
+
 
     }
 }

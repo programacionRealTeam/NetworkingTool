@@ -13,7 +13,6 @@ namespace DataLogs
         static void Main(string[] args)
         {
            MonitoringServices logsReg = new MonitoringServices();
-           Console.WriteLine(logsReg.initLogs());
            Console.ReadKey();
         }
     }
