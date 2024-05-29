@@ -51,7 +51,7 @@ namespace Application.Services
         public void CreateDevice(DeviceRequest request)
         {
             Device device = Mappers.mapperToDevice(request);
-            var query = "INSERT INTO devices (name, ip, category, prioridad) VALUES (?, ?, ?, ?)";
+            var query = "INSERT INTO direcciones (name, ip, category, prioridad) VALUES (?, ?, ?, ?)";
             var statement = _session.Prepare(query).Bind(device.name, device.ipAddress, device.category, device.prioridad);
             _session.Execute(statement);
         }
@@ -59,7 +59,7 @@ namespace Application.Services
         public List<DeviceRequest> GetAllDevices()
         {
             var devices = new List<DeviceRequest>();
-            var query = "SELECT * FROM devices";
+            var query = "SELECT * FROM direcciones";
             var rs = _session.Execute(query);
 
             foreach (var row in rs)

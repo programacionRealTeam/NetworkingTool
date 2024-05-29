@@ -11,6 +11,7 @@ using Domain.Interfaces;
 using System.Threading;
 using Application.Services;
 using Cassandra;
+using System.Linq;
 
 
 namespace Application.Services
@@ -58,8 +59,21 @@ namespace Application.Services
 
             return devicesOffline;
         }
+        /// <revisar>
+        public List<DeviceRequest> GetAllDevices()
+        {
+            // Obtener todos los dispositivos desde DeviceServices y convertir a DeviceRequest
+            var devices = _deviceServices.GetAllDevices();
+            return devices.Select(d => new DeviceRequest
+            {
+                name = d.name,
+                ip = d.ip,
+                category = d.category,
+                prioridad = d.prioridad
+            }).ToList();
+        }
+        /// </summary>
 
-        
 
         public string InitLogs()
         {

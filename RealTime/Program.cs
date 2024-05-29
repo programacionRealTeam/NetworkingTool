@@ -31,7 +31,7 @@ namespace RealTime
                         CargarDatos();
                         break;
                     case "2":
-                       // IniciarMonitoreo();
+                        IniciarMonitoreo();
                         break;
                     case "3":
                         Environment.Exit(0);
@@ -81,7 +81,7 @@ namespace RealTime
             Console.WriteLine("Dispositivo guardado correctamente.");
         }
 
-        /*static void IniciarMonitoreo()
+        static void IniciarMonitoreo()
         {
             MonitoringServices service = new MonitoringServices();
 
@@ -112,7 +112,7 @@ namespace RealTime
                 PieTabla();
             }
         }
-        */
+
         static void Transparencia(string mensaje, int duracionMilisegundos)
         {
             int progreso = 0;
