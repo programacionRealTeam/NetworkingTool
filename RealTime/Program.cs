@@ -1,13 +1,18 @@
-﻿using Application.Models;
-using Application.Services;
+﻿using Application.Interfaces;
+using Application.Models;
 using Application.Response;
+using Application.Services;
+using Infrastructure;
+using Infrastructure.Querys;
+using Infrastructure.Repo;
+using System.Net.NetworkInformation;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using Application.Interfaces;
-using System.Linq;//revisar
 
 namespace RealTime
 {
@@ -15,116 +20,94 @@ namespace RealTime
     {
         static void Main(string[] args)
         {
-            while (true)
+
+            //lista de dispositivos importados
+            List<DeviceRequest> deviceList = ImportDevice(@"..\..\..\Infrastructure\Persistence\importacionIP.txt");
+            
+            //"Controladores"
+    
+            DeviceOfflineCommand offlineCommand = new DeviceOfflineCommand();
+            DeviceCommand deviceCommand = new DeviceCommand();
+            DeviceQuerys deviceQuery = new DeviceQuerys();
+            DeviceOfflineQuerys deviceOfflineQuerys = new DeviceOfflineQuerys();
+
+
+            //inicializacion de servicio de monitoreo
+            MonitoringServices service = new MonitoringServices(deviceCommand, offlineCommand,deviceQuery, deviceOfflineQuerys);
+            service.ImportList(deviceList); // inicializo servicio de monitoreo
+            
+            //transparencia de inicio del sistema
+            Console.WriteLine("Inicializando servicios...");
+
+            Transparencia("Inicializando servicio de monitoreo de tiempo real...",3000);
+
+            //inicializo hilo de para la busqueda de dispositivos que vuelven a estar online
+            Thread offllineSearch = new Thread(() =>
             {
-                Console.WriteLine("Bienvenido al sistema de monitoreo en tiempo real");
-                Console.WriteLine("1. Cargar datos");
-                Console.WriteLine("2. Iniciar monitoreo en tiempo real");
-                Console.WriteLine("3. Salir");
-
-                Console.Write("Seleccione una opción: ");
-                string opcion = Console.ReadLine();
-
-                switch (opcion)
+                //Bucle continuo de impresion de dispositivos offline
+                while (service.isRunning())
                 {
-                    case "1":
-                        CargarDatos();
-                        break;
-                    case "2":
-                        IniciarMonitoreo();
-                        break;
-                    case "3":
-                        Environment.Exit(0);
-                        break;
-                    default:
-                        Console.WriteLine("Opción no válida. Por favor, seleccione una opción válida.");
-                        break;
+                    EncabezadoTabla();
+                    foreach (DeviceResponse device in service.getOfflineDevices())
+                    {
+                        Console.WriteLine("| {0,-20} | {1,-15} | {2,-15} | {3,-10} | {4,-26} | {5,-8} | {6,-25} |",
+                        device.name, device.ip, device.category, device.prioridad, device.Status, device.RoundtripTime, device.Timestamp);
+                    }
+                    PieTabla();
                 }
-            }
-        }
-
-        static void CargarDatos()
-        {
-            Console.WriteLine("Ingrese los detalles del dispositivo:");
-
-            Console.Write("Nombre del dispositivo: ");
-            string nombre = Console.ReadLine();
-
-            Console.Write("Dirección IP del dispositivo: ");
-            string ip = Console.ReadLine();
-
-            Console.Write("Categoría del dispositivo: ");
-            string categoria = Console.ReadLine();
-
-            Console.Write("Prioridad del dispositivo: ");
-            string prioridad = Console.ReadLine();
-
-            // Crear un objeto DeviceRequest con los datos ingresados por el usuario
-            DeviceRequest dispositivo = new DeviceRequest
-            {
-                name = nombre,
-                ip = ip,
-                category = categoria,
-                prioridad = prioridad
-            };
-
-            // Guardar el dispositivo en la base de datos
-            GuardarDispositivo(dispositivo);
-        }
-
-        static void GuardarDispositivo(DeviceRequest dispositivo)
-        {
-            // Lógica para guardar el dispositivo en Cassandra
-            MonitoringServices service = new MonitoringServices();
-            service.CreateDevice(dispositivo);
-
-            Console.WriteLine("Dispositivo guardado correctamente.");
-        }
-
-        static void IniciarMonitoreo()
-        {
-            MonitoringServices service = new MonitoringServices();
-
-            // Recuperar dispositivos desde Cassandra
-            List<DeviceRequest> deviceList = service.GetAllDevices();
-
-            Thread initThread = new Thread(() =>
-            {
-                service.InitRealTime(deviceList);
             });
 
-            initThread.Start();
+            offllineSearch.Start();
 
-            Console.WriteLine("Inicializando servicios...");
-            Thread.Sleep(1000);
-            Transparencia("Inicializando servicio de monitoreo de tiempo real", 10000);
-
-            while (true)
-            {
-                var offlineDevices = service.Sweep(deviceList);
-
-                EncabezadoTabla();
-                foreach (var device in offlineDevices)
-                {
-                    Console.WriteLine("| {0,-20} | {1,-15} | {2,-15} | {3,-10} | {4,-26} | {5,-8} | {6,-25} |",
-                        device.name, device.ip, device.category, device.prioridad, device.Status, device.RoundtripTime, device.Timestamp);
-                }
-                PieTabla();
-            }
         }
+
+
+
+        //FUNCIONES
+        
+       //importacion de dispositivos desde txt
+        static List<DeviceRequest> ImportDevice(string filePath)
+        {
+            List<DeviceRequest> deviceList = new List<DeviceRequest>();
+
+            using (var reader = new StreamReader(filePath))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    var data = line.Split(';');
+                    if (data.Length == 4)
+                    {
+                        var device = new DeviceRequest
+                        {
+                            name = data[0],
+                            ip = data[1],
+                            category = data[2],
+                            prioridad = data[3]
+                        };
+                        deviceList.Add(device);
+                    }
+                }
+            }
+
+            return deviceList;
+        }
+
+
 
         static void Transparencia(string mensaje, int duracionMilisegundos)
         {
             int progreso = 0;
-            int paso = 5;
+            int paso = 5; // Incremento de progreso por cada paso (5%)
 
             while (progreso < 100)
             {
                 progreso += paso;
-                MostrarBarraProgreso(mensaje, progreso);
+                MostrarBarraProgreso(mensaje,progreso);
                 Thread.Sleep(duracionMilisegundos / (100 / paso));
             }
 
+            // Limpia la consola después de completar la barra de progreso
             Console.Clear();
         }
 
@@ -132,7 +115,7 @@ namespace RealTime
         {
             Console.Write($"\r{mensaje}: [");
 
-            int caracteres = porcentaje / 2;
+            int caracteres = porcentaje / 2; // Cada 2% es un caracter de barra '[#####     ]'
             for (int i = 0; i < caracteres; i++)
             {
                 Console.Write("#");
@@ -143,23 +126,29 @@ namespace RealTime
                 Console.Write("-");
             }
 
-            Console.Write("]");
+            Console.Write("]" );
         }
 
         static void EncabezadoTabla()
         {
+            // Imprimir encabezado de tabla
             Console.WriteLine("+----------------------+-----------------+-----------------+------------+----------------------------+----------+---------------------------+");
+
             Console.WriteLine("| {0,-20} | {1,-15} | {2,-15} | {3,-10} | {4,-26} | {5,-8} | {6,-25} |",
                 "Nombre Dispositivo", "Direccion IP", "Categoría", "Prioridad", "Estado", "Time ms", "Ultima prueba de conexion");
+
+            // Imprimir línea de separación
             Console.WriteLine("+----------------------+-----------------+-----------------+------------+----------------------------+----------+---------------------------+");
+
         }
 
         static void PieTabla()
         {
-            Console.WriteLine("+----------------------+-----------------+-----------------+------------+----------------------------+----------+---------------------------+");
-            Transparencia("Procesando direcciones ip", 3000);
+
+            // Imprimir línea de separación
+           Console.WriteLine("+----------------------+-----------------+-----------------+------------+----------------------------+----------+---------------------------+");
+           Transparencia("Procesando direcciones ip", 3000);
+
         }
     }
 }
-       
-

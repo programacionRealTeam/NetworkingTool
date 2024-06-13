@@ -9,96 +9,228 @@ using System.Net.NetworkInformation;
 using System.IO;
 using Domain.Interfaces;
 using System.Threading;
-using Application.Services;
-using Cassandra;
-using System.Linq;
-
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Application.Services
 {
     public class MonitoringServices : IMonitoringServices
     {
-        private readonly DeviceServices _deviceServices;
 
-        public MonitoringServices()
+        private readonly IDeviceCommand _deviceCommand;
+        private readonly IDeviceOfflineCommand _offlineCommand;
+        private readonly IDeviceQuery _deviceQuery;
+        private readonly IDeviceOfflineQuery _deviceOfflineQuery;
+        public static bool flagService = false;
+
+        public MonitoringServices(IDeviceCommand deviceCommand, IDeviceOfflineCommand offlineCommand, IDeviceQuery deviceQuery, IDeviceOfflineQuery deviceOfflineQuery)
         {
-            _deviceServices = new DeviceServices();
+            _deviceQuery = deviceQuery;
+            _deviceOfflineQuery = deviceOfflineQuery;
+            _deviceCommand = deviceCommand;
+            _offlineCommand = offlineCommand;
+
         }
 
-        public void InitRealTime(List<DeviceRequest> listRequest)
-        {
-            bool isRunning = true;
 
-            Thread sweepThread = new Thread(() =>
+        public void ImportList(List<DeviceRequest> listReuqest)
+        {
+            List<Device> devices = new List<Device>();
+            foreach (DeviceRequest deviceRequest in listReuqest)
             {
-                while (isRunning)
+                Device device = Mappers.mapperToDevice(deviceRequest);
+
+                if (_deviceQuery.GetByName(device.name) != null)
                 {
-                    Sweep(listRequest);
+                    _deviceCommand.Update(device);
+                    devices.Add(device);
                 }
-            });
-
-            sweepThread.Start();
-            sweepThread.Join();
-        }
-
-        public List<DeviceResponse> Sweep(List<DeviceRequest> listRequest)
-        {
-            List<DeviceResponse> devicesOffline = new List<DeviceResponse>();
-
-            foreach (DeviceRequest request in listRequest)
-            {
-                var device = Mappers.mapperToDevice(request);
-                var response = _deviceServices.Ping(device);
-
-                if (response.Status != IPStatus.Success)
+                else
                 {
-                    devicesOffline.Add(response);
-                    _deviceServices.CreateDevice(request); // Guardar en Cassandra
+                    _deviceCommand.Insert(device);
+                    devices.Add(device);
                 }
             }
 
-            return devicesOffline;
+            //inicia servicio de monitoreo con lista device 
+           scan(devices);
+
         }
-        /// <revisar>
-        public List<DeviceRequest> GetAllDevices()
+
+        public void scan(List<Device> listDevices)
         {
-            // Obtener todos los dispositivos desde DeviceServices y convertir a DeviceRequest
-            var devices = _deviceServices.GetAllDevices();
-            return devices.Select(d => new DeviceRequest
+            List<Device> hightPriority = new List<Device>();
+            List<Device> mediumPriority = new List<Device>();
+            List<Device> lowPriority = new List<Device>();
+
+            foreach (Device dev in listDevices)
             {
-                name = d.name,
-                ip = d.ip,
-                category = d.category,
-                prioridad = d.prioridad
-            }).ToList();
+                switch (dev.prioridad)
+                {
+                    case "Alta":
+                        hightPriority.Add(dev);
+                        break;
+
+                    case "Media":
+                        mediumPriority.Add(dev);
+                        break;
+
+                    case "Baja":
+                        lowPriority.Add(dev);
+                        break;
+
+                    default:
+                        lowPriority.Add(dev);
+                        break;
+                }
+            }
+            Init(hightPriority,mediumPriority,lowPriority);
         }
-        /// </summary>
 
-
-        public string InitLogs()
+        //inicializacion de monitoreo de tiempo real
+        public void Init(List<Device> hightPriority, List<Device> mediumPriority, List<Device> lowPriority)
         {
-            // Implementación de logs aquí, por ahora solo devolvemos un mensaje.
+            DeviceServices deviceServices = new DeviceServices();
+            flagService = true;
+
+            //inicializo hilo de para la busqueda de dispositivos hightPriority
+            Thread priorityHigth = new Thread(() =>
+            {
+                while (true)
+                {
+                    foreach (Device dev in hightPriority)
+                    {
+                        DeviceResponse response = deviceServices.ping(dev);
+
+                        if (response.Status != "Success")
+                        {
+                            if (_deviceOfflineQuery.GetByName(response.name) != null)
+                            {
+                                _offlineCommand.Update(response);
+                            }
+                            else
+                            {
+                                _offlineCommand.Insert(response);
+                            }
+                        }
+                    }
+                    Thread.Sleep(500);
+                }
+               
+            });
+
+            //inicializo hilo de para la busqueda de dispositivos mediumPriority
+            Thread priorityMedium = new Thread(() =>
+            {
+                while (true)
+                {
+                    foreach (Device dev in mediumPriority)
+                    {
+                        DeviceResponse response = deviceServices.ping(dev);
+
+                        if (response.Status != "Success")
+                        {
+                            if (_deviceOfflineQuery.GetByName(response.name) != null)
+                            {
+                                _offlineCommand.Update(response);
+                            }
+                            else
+                            {
+                                _offlineCommand.Insert(response);
+                            }
+                        }
+                        Thread.Sleep(500);
+                    }
+
+                    Thread.Sleep(2000);
+                }
+               
+            });
+
+            //inicializo hilo de para la busqueda de dispositivos lowPriority
+            Thread priorityLow = new Thread(() =>
+            {
+                while (true)
+                {
+                    foreach (Device dev in lowPriority)
+                    {
+                        DeviceResponse response = deviceServices.ping(dev);
+
+                        if (response.Status != "Success")
+                        {
+                            if (_deviceOfflineQuery.GetByName(response.name) != null)
+                            {
+                                _offlineCommand.Update(response);
+                            }
+                            else
+                            {
+                                _offlineCommand.Insert(response);
+                            }
+                        }
+                        Thread.Sleep(1000);
+                    }
+                    Thread.Sleep(4000);
+                }
+                
+            });
+
+
+            //inicializo hilo de para la busqueda de dispositivos que vuelven a estar online
+            Thread onlineSearch = new Thread(() =>
+            {
+                List<DeviceOffline> deviceOffline = new List<DeviceOffline>();
+                Device device = new Device();
+
+                while (true)
+                {
+                    deviceOffline = _deviceOfflineQuery.GetAll(); //obtengo todos los dispositivos offline de la db
+
+                    foreach (DeviceOffline dev in deviceOffline )
+                    {
+                        device.name = dev.name;
+                        device.ipAddress = dev.ip;
+                        device.prioridad = dev.prioridad;
+                        device.category = dev.category;
+                         
+                        DeviceResponse response = deviceServices.ping(device);
+                        if (response.Status == "Success")
+                        {
+                            _offlineCommand.Delete(response.name);
+                        }
+                    }
+                }
+            });
+
+            priorityHigth.Start();
+            priorityMedium.Start();
+            priorityLow.Start();
+            onlineSearch.Start();
+
+        }
+
+        public bool isRunning()
+        {
+            return flagService;
+        }
+
+        public string initLogs()
+        {
+            //A DESARROLLAR ETAPA DE ALMACENAMIENTO Y CONTEO DE TIEMPO MUERTO DE DISPOSITIVO
             string mensaje = "Listado de dispositivos que tuvieron perdidas de conexion:";
             return mensaje;
         }
 
-        public void CreateDevice(DeviceRequest device)
+        public List<DeviceResponse> getOfflineDevices()
         {
-            // Por ejemplo, utilizando la clase CassandraContext para interactuar con la base de datos
-            using (ISession session = CassandraContext.GetSession())
+            List<DeviceResponse> offlineDevices = new List<DeviceResponse>();
+
+            foreach (DeviceOffline device in _deviceOfflineQuery.GetAll())
             {
-                // Ejemplo de código para insertar el dispositivo en una tabla de Cassandra [direcciones -> nombre de la tabla ]
-                string query = $"INSERT INTO direcciones (name, ip, category, prioridad) VALUES (?, ?, ?, ?)";
-
-                var preparedStatement = session.Prepare(query);
-                var boundStatement = preparedStatement.Bind(device.name, device.ip, device.category, device.prioridad);
-
-                session.Execute(boundStatement);
+                offlineDevices.Add(Mappers.mapperOfflineToResponse(device));
             }
 
-            Console.WriteLine("Dispositivo guardado correctamente.");
-        }
+           return offlineDevices;
 
+        }
 
     }
 }
