@@ -47,7 +47,6 @@
     <Compile Include="Interfaces\IMonitoringServices.cs" />
     <Compile Include="Interfaces\IDeviceServices.cs" />
     <Compile Include="Models\DeviceRequest.cs" />
-    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Models\DeviceResponse.cs" />
     <Compile Include="Services\MonitoringServices.cs" />
